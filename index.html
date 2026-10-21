@@ -7,8 +7,6 @@
   
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <!-- Supabase JS -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
@@ -38,58 +36,66 @@
     </div>
   </div>
 
+  <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <script>
     const SUPABASE_URL = 'https://mnshtcmwelucfyanxvsk.supabase.co';
-    const SUPABASE_KEY = 'Sb_publishable_Lhvck2iL0qEQPyIpCMC7sA_9-EINsLY'; 
-    
-    // إنشاء الاتصال
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-      auth: { persistSession: false }
-    });
+    const SUPABASE_KEY = 'Sb_publishable_Lhvck2iL0qEQPyIpCMC7sA_9-EINsLY';
 
     // إعداد الخريطة
     const map = L.map('map').setView([31.058, 46.257], 11);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/*.png', {
       attribution: '&copy; OpenStreetMap'
     }).addTo(map);
 
-    // جلب البيانات من قاعدة البيانات
+    // جلب البيانات بالطريقة المباشرة الآمنة
     async function loadProjects() {
-      const { data: projects, error } = await supabaseClient.from('projects').select('*');
       const listContainer = document.getElementById('projects-list');
+      
+      try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/projects?select=*`, {
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`
+          }
+        });
 
-      if (error) {
-        listContainer.innerHTML = `<p style="color: #ef4444;">حدث خطأ أثناء جلب البيانات: ${error.message}</p>`;
-        return;
-      }
-
-      if (!projects || projects.length === 0) {
-        listContainer.innerHTML = '<p>لا توجد مشاريع مسجلة حالياً.</p>';
-        return;
-      }
-
-      listContainer.innerHTML = '';
-
-      projects.forEach(project => {
-        if (project.lat && project.lng) {
-          const marker = L.marker([project.lat, project.lng]).addTo(map);
-          marker.bindPopup(`<b>${project.title}</b><br>نسبة الإنجاز: ${project.completion_rate}%`).openPopup();
+        if (!response.ok) {
+          throw new Error('فشل الاتصال بقاعدة البيانات');
         }
 
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.innerHTML = `
-          <h3>${project.title}</h3>
-          <p><strong>الجهة:</strong> ${project.entity || 'غير محدد'}</p>
-          <p><strong>المحافظة:</strong> ${project.governorate} - ${project.district || ''}</p>
-          <p><strong>الموازنة:</strong> ${project.budget || 'غير معلنة'}</p>
-          <p><strong>نسبة الإنجاز:</strong> ${project.completion_rate}%</p>
-          <span class="badge">${project.status}</span>
-        `;
-        listContainer.appendChild(card);
-      });
+        const projects = await response.json();
+
+        if (!projects || projects.length === 0) {
+          listContainer.innerHTML = '<p>لا توجد مشاريع مسجلة حالياً.</p>';
+          return;
+        }
+
+        listContainer.innerHTML = '';
+
+        projects.forEach(project => {
+          if (project.lat && project.lng) {
+            const marker = L.marker([project.lat, project.lng]).addTo(map);
+            marker.bindPopup(`<b>${project.title}</b><br>نسبة الإنجاز: ${project.completion_rate}%`).openPopup();
+          }
+
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.innerHTML = `
+            <h3>${project.title}</h3>
+            <p><strong>الجهة:</strong> ${project.entity || 'غير محدد'}</p>
+            <p><strong>المحافظة:</strong> ${project.governorate} - ${project.district || ''}</p>
+            <p><strong>الموازنة:</strong> ${project.budget || 'غير معلنة'}</p>
+            <p><strong>نسبة الإنجاز:</strong> ${project.completion_rate}%</p>
+            <span class="badge">${project.status}</span>
+          `;
+          listContainer.appendChild(card);
+        });
+
+      } catch (error) {
+        listContainer.innerHTML = `<p style="color: #ef4444;">حدث خطأ أثناء جلب البيانات: ${error.message}</p>`;
+      }
     }
 
     loadProjects();
