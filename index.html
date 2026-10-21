@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>عين الشعب - منصة متابعة المشاريع الحكومية</title>
   
-  <!-- Leaflet CSS (للتصميم الخاص بالخريطة) -->
+  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <!-- Supabase JS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -42,18 +42,18 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <script>
-    // 1. إعداد Supabase
+    // إعداد Supabase بالمفاتيح الصحيحة
     const SUPABASE_URL = 'https://mnshtcmwelucfyanxvsk.supabase.co';
-    const SUPABASE_KEY = 'Sb_publishable_Lhvck2iL0qEQPyIpCMC7sA_9-EINsLY';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1uc2h0Y213ZWx1Y2Z5YW54dnNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1Nzk5ODEsImV4cCI6MjEwODE1NTk4MX0.MhuqwOXy8upW_BUHmjwQhmmJPL1ArpXn8fCZUKW-MHw';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // 2. إعداد الخريطة على مركز العراق
-    const map = L.map('map').setView([33.3152, 44.3661], 6);
+    // إعداد الخريطة
+    const map = L.map('map').setView([31.058, 46.257], 12);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap'
     }).addTo(map);
 
-    // 3. جلب البيانات من قاعدة البيانات
+    // جلب البيانات من قاعدة البيانات
     async function loadProjects() {
       const { data: projects, error } = await supabaseClient.from('projects').select('*');
       const listContainer = document.getElementById('projects-list');
@@ -71,13 +71,11 @@
       listContainer.innerHTML = '';
 
       projects.forEach(project => {
-        // إضافة مؤشر على الخريطة إذا كانت الإحداثيات متوفرة
         if (project.lat && project.lng) {
           const marker = L.marker([project.lat, project.lng]).addTo(map);
-          marker.bindPopup(`<b>${project.title}</b><br>نسبة الإنجاز: ${project.completion_rate}%`);
+          marker.bindPopup(`<b>${project.title}</b><br>نسبة الإنجاز: ${project.completion_rate}%`).openPopup();
         }
 
-        // إضافة كارت للمشروع في القائمة
         const card = document.createElement('div');
         card.className = 'card';
         card.innerHTML = `
