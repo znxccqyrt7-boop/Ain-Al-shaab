@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>عين الشعب - منصة متابعة المشاريع الحكومية</title>
+  
+  <!-- Leaflet CSS (للتصميم الخاص بالخريطة) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background-color: #0f172a; color: #f8fafc; }
+    header { padding: 1rem 2rem; background: #1e293b; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
+    h1 { font-size: 1.5rem; color: #38bdf8; }
+    #container { display: flex; flex-direction: column; height: calc(100vh - 65px); }
+    #map { flex: 1; width: 100%; height: 60vh; }
+    #projects-list { padding: 1.5rem; background: #0f172a; overflow-y: auto; flex: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; }
+    .card { background: #1e293b; padding: 1.25rem; border-radius: 12px; border: 1px solid #334155; }
+    .card h3 { color: #f1f5f9; margin-bottom: 0.5rem; }
+    .card p { color: #94a3b8; font-size: 0.9rem; margin-bottom: 0.25rem; }
+    .badge { display: inline-block; padding: 0.25rem 0.5rem; font-size: 0.8rem; border-radius: 6px; background: #0284c7; color: white; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>عين الشعب 🇮🇶</h1>
+    <span>منصة تعقب المشاريع والموازنات</span>
+  </header>
+
+  <div id="container">
+    <div id="map"></div>
+    <div id="projects-list">
+      <p style="color: #94a3b8;">جاري تحميل المشاريع...</p>
+    </div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    // 1. إعداد Supabase
+    const SUPABASE_URL = 'https://mnshtcmwelucfyanxvsk.supabase.co';
+    const SUPABASE_KEY = 'Sb_publishable_Lhvck2iL0qEQPyIpCMC7sA_9-EINsLY';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // 2. إعداد الخريطة على مركز العراق
+    const map = L.map('map').setView([33.3152, 44.3661], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+
+    // 3. جلب البيانات من قاعدة البيانات
+    async function loadProjects() {
+      const { data: projects, error } = await supabaseClient.from('projects').select('*');
+      const listContainer = document.getElementById('projects-list');
+
+      if (error) {
+        listContainer.innerHTML = `<p style="color: #ef4444;">حدث خطأ أثناء جلب البيانات: ${error.message}</p>`;
+        return;
+      }
+
+      if (projects.length === 0) {
+        listContainer.innerHTML = '<p>لا توجد مشاريع مسجلة حالياً.</p>';
+        return;
+      }
+
+      listContainer.innerHTML = '';
+
+      projects.forEach(project => {
+        // إضافة مؤشر على الخريطة إذا كانت الإحداثيات متوفرة
+        if (project.lat && project.lng) {
+          const marker = L.marker([project.lat, project.lng]).addTo(map);
+          marker.bindPopup(`<b>${project.title}</b><br>نسبة الإنجاز: ${project.completion_rate}%`);
+        }
+
+        // إضافة كارت للمشروع في القائمة
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <h3>${project.title}</h3>
+          <p><strong>الجهة:</strong> ${project.entity || 'غير محدد'}</p>
+          <p><strong>المحافظة:</strong> ${project.governorate} - ${project.district || ''}</p>
+          <p><strong>الموازنة:</strong> ${project.budget || 'غير معلنة'}</p>
+          <p><strong>نسبة الإنجاز:</strong> ${project.completion_rate}%</p>
+          <span class="badge">${project.status}</span>
+        `;
+        listContainer.appendChild(card);
+      });
+    }
+
+    loadProjects();
+  </script>
+</body>
+</html>
